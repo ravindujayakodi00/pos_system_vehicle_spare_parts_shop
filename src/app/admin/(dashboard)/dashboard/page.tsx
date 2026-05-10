@@ -13,9 +13,8 @@ import {
 import { reportsService } from "@/services/reports";
 import { productsService } from "@/services/products";
 import { customersService } from "@/services/customers";
-import { scheduleAutoBackup } from "@/lib/backup";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { Product } from "@/lib/types";
+import { Product, RecentSaleListItem } from "@/lib/types";
 
 interface Stats {
   todaySales: number;
@@ -24,15 +23,6 @@ interface Stats {
   lowStockCount: number;
   totalCustomers: number;
   monthlyRevenue: number;
-}
-
-interface RecentSale {
-  id: string;
-  invoice_number: string;
-  customer_name?: string;
-  total_amount: number;
-  payment_method: string;
-  created_at: string;
 }
 
 export default function DashboardPage() {
@@ -44,13 +34,11 @@ export default function DashboardPage() {
     totalCustomers: 0,
     monthlyRevenue: 0,
   });
-  const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
+  const [recentSales, setRecentSales] = useState<RecentSaleListItem[]>([]);
   const [lowStockItems, setLowStockItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Auto-backup runs silently in the background
-    scheduleAutoBackup().catch(() => {});
     loadData();
   }, []);
 
@@ -81,7 +69,7 @@ export default function DashboardPage() {
         monthlyRevenue,
       });
       setLowStockItems(lowStock.slice(0, 5));
-      setRecentSales(recent as RecentSale[]);
+      setRecentSales(recent);
     } catch (err) {
       console.error("Dashboard load error:", err);
     } finally {

@@ -1,4 +1,5 @@
 import { getSupabaseClient } from "@/lib/supabase";
+import type { RecentSaleListItem } from "@/lib/types";
 
 export interface SalesSummary {
   date: string;
@@ -102,7 +103,7 @@ export const reportsService = {
     return data?.reduce((sum, s) => sum + s.total_amount, 0) ?? 0;
   },
 
-  async getRecentSales(limit = 5) {
+  async getRecentSales(limit = 5): Promise<RecentSaleListItem[]> {
     const { data, error } = await getSupabaseClient()
       .from("sales")
       .select("id, invoice_number, customer_name, total_amount, payment_method, created_at")
@@ -111,7 +112,7 @@ export const reportsService = {
       .limit(limit);
 
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []) as RecentSaleListItem[];
   },
 
   async getSalesForDate(date: string) {

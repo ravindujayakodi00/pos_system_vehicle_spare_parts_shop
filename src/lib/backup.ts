@@ -2,10 +2,6 @@ import { reportsService } from "@/services/reports";
 
 const LAST_BACKUP_KEY = "pos_last_backup_date";
 
-function todayStr(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
 export async function exportSalesReport(date: string): Promise<void> {
   const sales = await reportsService.getSalesForDate(date);
 
@@ -75,21 +71,3 @@ export async function exportSalesReport(date: string): Promise<void> {
   console.log(`[Backup] Exported ${sales.length} sales to ${fileName}`);
 }
 
-export function shouldRunBackup(): boolean {
-  const lastBackup = localStorage.getItem(LAST_BACKUP_KEY);
-  return lastBackup !== todayStr();
-}
-
-export async function scheduleAutoBackup(): Promise<void> {
-  if (!shouldRunBackup()) return;
-
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-  try {
-    await exportSalesReport(yesterdayStr);
-  } catch (err) {
-    console.error("[Backup] Auto backup failed:", err);
-  }
-}

@@ -400,6 +400,9 @@ export default function POSPage() {
             )}
           </div>
 
+          {/* Scrollable middle content */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+
           {/* Customer search */}
           <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
             {selectedCustomer ? (
@@ -453,7 +456,7 @@ export default function POSPage() {
           </div>
 
           {/* Cart items */}
-          <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2 min-h-32">
+          <div className="px-5 py-3 space-y-2 min-h-32">
             {cart.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">No items in cart</p>
             ) : (
@@ -491,6 +494,8 @@ export default function POSPage() {
               ))
             )}
           </div>
+
+          {/* Cart items end - no extra wrapper needed */}
 
           {/* Discount */}
           <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700">
@@ -571,6 +576,8 @@ export default function POSPage() {
               </div>
             )}
           </div>
+
+          </div>{/* end scrollable middle */}
 
           {/* Checkout button */}
           <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700">

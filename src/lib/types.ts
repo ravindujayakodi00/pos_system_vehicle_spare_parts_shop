@@ -93,6 +93,16 @@ export interface SaleItem {
   total_price: number;
 }
 
+/** Selected sale fields for dashboard / recent-sales lists */
+export interface RecentSaleListItem {
+  id: string;
+  invoice_number: string;
+  customer_name: string | null;
+  total_amount: number;
+  payment_method: PaymentMethod;
+  created_at: string;
+}
+
 export interface Sale {
   id: string;
   invoice_number: string;
