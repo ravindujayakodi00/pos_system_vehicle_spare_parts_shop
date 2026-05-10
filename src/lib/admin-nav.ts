@@ -31,5 +31,5 @@ export const adminNavItems: NavItem[] = [
   { label: "Suppliers", href: "/admin/suppliers", icon: Truck },
   { label: "Staff", href: "/admin/staff", icon: UserCog, ownerOnly: true },
   { label: "Reports", href: "/admin/reports", icon: BarChart2, ownerOnly: true },
-  { label: "Settings", href: "/admin/settings", icon: Settings, ownerOnly: true },
+  { label: "Settings", href: "/admin/settings", icon: Settings },
 ];

@@ -65,7 +65,7 @@ export default function DashboardPage() {
         todayRevenue: todayStats.revenue,
         totalProducts,
         lowStockCount: lowStock.length,
-        totalCustomers: customers.length,
+        totalCustomers: customers.count,
         monthlyRevenue,
       });
       setLowStockItems(lowStock.slice(0, 5));

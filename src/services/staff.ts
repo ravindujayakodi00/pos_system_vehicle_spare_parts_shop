@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "@/lib/supabase";
-import { StaffMember, Role } from "@/lib/types";
+import { StaffMember, Role, PaginatedResponse } from "@/lib/types";
 
 export const staffService = {
   async getRoles(): Promise<Role[]> {
@@ -21,13 +21,39 @@ export const staffService = {
     return data ?? [];
   },
 
-  async getStaff(): Promise<StaffMember[]> {
-    const { data, error } = await getSupabaseClient()
+  async getStaff(
+    page = 1,
+    limit = 50,
+    searchQuery?: string
+  ): Promise<PaginatedResponse<StaffMember>> {
+    const { data: roles } = await getSupabaseClient()
+      .from("roles")
+      .select("id")
+      .eq("is_visible", true);
+    const visibleRoleIds = roles?.map((r) => r.id) || [];
+
+    let query = getSupabaseClient()
       .from("staff")
-      .select("*, role:roles(*)")
-      .order("name");
+      .select("*, role:roles(*)", { count: "exact" })
+      .in("role_id", visibleRoleIds);
+
+    if (searchQuery) {
+      query = query.or(`name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`);
+    }
+
+    const { data, error, count } = await query
+      .order("name")
+      .range((page - 1) * limit, page * limit - 1);
+
     if (error) throw error;
-    return (data ?? []) as StaffMember[];
+    
+    return {
+      data: (data ?? []) as StaffMember[],
+      count: count ?? 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count ?? 0) / limit),
+    };
   },
 
   async getStaffById(id: string): Promise<StaffMember | null> {

@@ -10,6 +10,7 @@ import { settingsService } from "@/services/settings";
 import { customersService } from "@/services/customers";
 import { InvoiceModal } from "@/components/pos/InvoiceModal";
 import { Modal } from "@/components/shared/Modal";
+import { PhoneInput } from "@/components/shared/PhoneInput";
 import { Product, Sale, ShopSettings, PaymentMethod, Customer } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
@@ -635,7 +636,11 @@ export default function POSPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone <span className="text-red-500">*</span></label>
-            <input value={newCustomerForm.phone} onChange={(e) => setNewCustomerForm((p) => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+            <PhoneInput
+              value={newCustomerForm.phone}
+              onChange={(v) => setNewCustomerForm((p) => ({ ...p, phone: v }))}
+              required
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>

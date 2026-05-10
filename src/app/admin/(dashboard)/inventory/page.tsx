@@ -7,6 +7,7 @@ import { productsService } from "@/services/products";
 import { InventoryTransaction, Product } from "@/lib/types";
 import { useToast } from "@/context/ToastContext";
 import { AddStockModal } from "@/components/inventory/AddStockModal";
+import { Pagination } from "@/components/shared/Pagination";
 import { formatDateTime } from "@/lib/utils";
 
 const typeColors: Record<string, string> = {
@@ -22,27 +23,33 @@ export default function InventoryPage() {
   const [lowStockItems, setLowStockItems] = useState<Product[]>([]);
   const [productMap, setProductMap] = useState<Record<string, Product>>({});
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [showAddStock, setShowAddStock] = useState(false);
   const { showToast } = useToast();
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      const [txs, products, lowStock] = await Promise.all([
-        inventoryService.getTransactions(50),
-        productsService.getProducts(),
+      const [txData, products, lowStock] = await Promise.all([
+        inventoryService.getTransactions(page, 50),
+        productsService.getProducts(1, 10000), // keep all products to map ID to name for now, or just leave it
         productsService.getLowStockProducts(),
       ]);
-      setTransactions(txs);
+      setTransactions(txData.data);
+      setTotalRecords(txData.count);
+      setTotalPages(txData.totalPages);
       setLowStockItems(lowStock);
       const map: Record<string, Product> = {};
-      products.forEach((p) => { map[p.id] = p; });
+      products.data.forEach((p) => { map[p.id] = p; });
       setProductMap(map);
     } catch {
       showToast("Failed to load inventory data", "error");
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [page, showToast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -176,6 +183,14 @@ export default function InventoryPage() {
               </tbody>
             </table>
           </div>
+          
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRecords={totalRecords}
+            limit={50}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 

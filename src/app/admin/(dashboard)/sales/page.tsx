@@ -1,29 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FileText } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { FileText, Search } from "lucide-react";
 import { salesService } from "@/services/sales";
 import { Sale } from "@/lib/types";
 import { useToast } from "@/context/ToastContext";
+import { Pagination } from "@/components/shared/Pagination";
 import { formatCurrency } from "@/lib/utils";
 
 export default function SalesPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   const { showToast } = useToast();
 
+  const fetchSales = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, count, totalPages: tp } = await salesService.getSales(page, 50, searchQuery);
+      setSales(data);
+      setTotalRecords(count);
+      setTotalPages(tp);
+    } catch {
+      showToast("Failed to load sales", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, searchQuery, showToast]);
+
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await salesService.getSales();
-        setSales(data);
-      } catch {
-        showToast("Failed to load sales", "error");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [showToast]);
+    const timer = setTimeout(() => {
+      fetchSales();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchSales]);
 
   const statusColors: Record<string, string> = {
     completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
@@ -33,9 +46,24 @@ export default function SalesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sales</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">View all sales transactions</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sales</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">View all sales transactions</p>
+        </div>
+        <div className="relative max-w-sm w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search by invoice or customer..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
       </div>
 
       <div className="surface-panel overflow-hidden">
@@ -90,6 +118,14 @@ export default function SalesPage() {
             )}
           </tbody>
         </table>
+        
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalRecords={totalRecords}
+          limit={50}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

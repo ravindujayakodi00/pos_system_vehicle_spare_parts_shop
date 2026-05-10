@@ -7,6 +7,7 @@ import { Product } from "@/lib/types";
 import { useToast } from "@/context/ToastContext";
 import { ProductFormModal } from "@/components/products/ProductFormModal";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
+import { Pagination } from "@/components/shared/Pagination";
 import { formatCurrency } from "@/lib/utils";
 
 const MAX_PRODUCTS = 400;
@@ -16,6 +17,9 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
@@ -23,23 +27,25 @@ export default function ProductsPage() {
   const { showToast } = useToast();
 
   const fetchProducts = useCallback(async () => {
+    setLoading(true);
     try {
-      const data = await productsService.getProducts();
+      const { data, count, totalPages: tp } = await productsService.getProducts(page, 50, searchQuery);
       setProducts(data);
+      setTotalRecords(count);
+      setTotalPages(tp);
     } catch {
       showToast("Failed to load products", "error");
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [page, searchQuery, showToast]);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
-
-  const filtered = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.part_number.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProducts();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchProducts]);
 
   const handleDelete = async () => {
     if (!deleteProduct) return;
@@ -104,7 +110,10 @@ export default function ProductsPage() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
             placeholder="Search by code or name..."
             className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -136,7 +145,7 @@ export default function ProductsPage() {
                       ))}
                     </tr>
                   ))
-                ) : filtered.length === 0 ? (
+                ) : products.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-14 text-center">
                       <Package className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
@@ -146,7 +155,7 @@ export default function ProductsPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((product) => {
+                  products.map((product) => {
                     const isLowStock = product.stock_quantity <= product.min_stock_level;
                     return (
                       <tr
@@ -204,6 +213,14 @@ export default function ProductsPage() {
               </tbody>
             </table>
           </div>
+          
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRecords={totalRecords}
+            limit={50}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 

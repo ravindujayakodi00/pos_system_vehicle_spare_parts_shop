@@ -228,3 +228,12 @@ export interface Toast {
   message: string;
   type: ToastType;
 }
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  count: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+

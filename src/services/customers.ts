@@ -1,14 +1,33 @@
 import { getSupabaseClient } from "@/lib/supabase";
-import { Customer } from "@/lib/types";
+import { Customer, PaginatedResponse } from "@/lib/types";
 
 export const customersService = {
-  async getCustomers(): Promise<Customer[]> {
-    const { data, error } = await getSupabaseClient()
+  async getCustomers(
+    page = 1,
+    limit = 50,
+    searchQuery?: string
+  ): Promise<PaginatedResponse<Customer>> {
+    let query = getSupabaseClient()
       .from("customers_with_totals")
-      .select("*")
-      .order("name");
+      .select("*", { count: "exact" });
+
+    if (searchQuery) {
+      query = query.or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`);
+    }
+
+    const { data, error, count } = await query
+      .order("name")
+      .range((page - 1) * limit, page * limit - 1);
+
     if (error) throw error;
-    return data ?? [];
+    
+    return {
+      data: data ?? [],
+      count: count ?? 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count ?? 0) / limit),
+    };
   },
 
   async getCustomerById(id: string): Promise<Customer | null> {

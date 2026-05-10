@@ -1,15 +1,26 @@
 import { getSupabaseClient } from "@/lib/supabase";
-import { InventoryTransaction, InventoryTransactionType } from "@/lib/types";
+import { InventoryTransaction, InventoryTransactionType, PaginatedResponse } from "@/lib/types";
 
 export const inventoryService = {
-  async getTransactions(limit = 100): Promise<InventoryTransaction[]> {
-    const { data, error } = await getSupabaseClient()
+  async getTransactions(
+    page = 1,
+    limit = 50
+  ): Promise<PaginatedResponse<InventoryTransaction>> {
+    const { data, error, count } = await getSupabaseClient()
       .from("inventory_transactions")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .range((page - 1) * limit, page * limit - 1);
+
     if (error) throw error;
-    return data ?? [];
+    
+    return {
+      data: data ?? [],
+      count: count ?? 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count ?? 0) / limit),
+    };
   },
 
   async getTransactionsByProduct(productId: string): Promise<InventoryTransaction[]> {

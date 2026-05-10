@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Search, Users } from "lucide-react";
-import { customersService } from "@/services/customers";
 import { Customer } from "@/lib/types";
+import { customersService } from "@/services/customers";
 import { useToast } from "@/context/ToastContext";
 import { Modal } from "@/components/shared/Modal";
+import { PhoneInput } from "@/components/shared/PhoneInput";
+import { Pagination } from "@/components/shared/Pagination";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 const emptyForm = {
@@ -21,6 +23,9 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -28,23 +33,25 @@ export default function CustomersPage() {
   const { showToast } = useToast();
 
   const fetchCustomers = useCallback(async () => {
+    setLoading(true);
     try {
-      const data = await customersService.getCustomers();
+      const { data, count, totalPages: tp } = await customersService.getCustomers(page, 50, searchQuery);
       setCustomers(data);
+      setTotalRecords(count);
+      setTotalPages(tp);
     } catch {
       showToast("Failed to load customers", "error");
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [page, searchQuery, showToast]);
 
-  useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
-
-  const filtered = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery)
-  );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchCustomers();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchCustomers]);
 
   const openAdd = () => {
     setEditCustomer(null);
@@ -119,7 +126,10 @@ export default function CustomersPage() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
             placeholder="Search by name or phone..."
             className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -147,7 +157,7 @@ export default function CustomersPage() {
                       ))}
                     </tr>
                   ))
-                ) : filtered.length === 0 ? (
+                ) : customers.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center">
                       <Users className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
@@ -157,7 +167,7 @@ export default function CustomersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((customer) => (
+                  customers.map((customer) => (
                     <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{customer.name}</td>
                       <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{customer.phone}</td>
@@ -182,6 +192,14 @@ export default function CustomersPage() {
               </tbody>
             </table>
           </div>
+          
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRecords={totalRecords}
+            limit={50}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 
@@ -194,7 +212,11 @@ export default function CustomersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone <span className="text-red-500">*</span></label>
-              <input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              <PhoneInput
+                value={form.phone}
+                onChange={(v) => setForm((p) => ({ ...p, phone: v }))}
+                required
+              />
             </div>
           </div>
           <div>

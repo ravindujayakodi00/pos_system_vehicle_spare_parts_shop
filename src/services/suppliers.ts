@@ -1,14 +1,33 @@
 import { getSupabaseClient } from "@/lib/supabase";
-import { Supplier } from "@/lib/types";
+import { Supplier, PaginatedResponse } from "@/lib/types";
 
 export const suppliersService = {
-  async getSuppliers(): Promise<Supplier[]> {
-    const { data, error } = await getSupabaseClient()
+  async getSuppliers(
+    page = 1,
+    limit = 50,
+    searchQuery?: string
+  ): Promise<PaginatedResponse<Supplier>> {
+    let query = getSupabaseClient()
       .from("suppliers")
-      .select("*")
-      .order("name");
+      .select("*", { count: "exact" });
+
+    if (searchQuery) {
+      query = query.or(`name.ilike.%${searchQuery}%,contact_person.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`);
+    }
+
+    const { data, error, count } = await query
+      .order("name")
+      .range((page - 1) * limit, page * limit - 1);
+
     if (error) throw error;
-    return data ?? [];
+    
+    return {
+      data: data ?? [],
+      count: count ?? 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count ?? 0) / limit),
+    };
   },
 
   async getSupplierById(id: string): Promise<Supplier | null> {

@@ -37,7 +37,7 @@ export function AddStockModal({
 
   useEffect(() => {
     if (open) {
-      productsService.getProducts().then(setProducts).catch(() => {});
+      productsService.getProducts(1, 10000).then((res) => setProducts(res.data)).catch(() => {});
       if (preselectedProduct) setProductId(preselectedProduct.id);
     }
   }, [open, preselectedProduct]);

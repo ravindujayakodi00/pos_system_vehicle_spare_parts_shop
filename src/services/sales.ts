@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "@/lib/supabase";
-import { Sale, SaleItem } from "@/lib/types";
+import { Sale, SaleItem, PaginatedResponse } from "@/lib/types";
 import { generateInvoiceNumber } from "@/lib/utils";
 
 interface CreateSalePayload {
@@ -13,14 +13,32 @@ interface CreateSalePayload {
 }
 
 export const salesService = {
-  async getSales(limit = 50): Promise<Sale[]> {
-    const { data, error } = await getSupabaseClient()
+  async getSales(
+    page = 1,
+    limit = 50,
+    searchQuery?: string
+  ): Promise<PaginatedResponse<Sale>> {
+    let query = getSupabaseClient()
       .from("sales")
-      .select("*")
+      .select("*", { count: "exact" });
+
+    if (searchQuery) {
+      query = query.or(`invoice_number.ilike.%${searchQuery}%,customer_name.ilike.%${searchQuery}%`);
+    }
+
+    const { data, error, count } = await query
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .range((page - 1) * limit, page * limit - 1);
+
     if (error) throw error;
-    return data ?? [];
+    
+    return {
+      data: data ?? [],
+      count: count ?? 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count ?? 0) / limit),
+    };
   },
 
   async getSaleById(id: string): Promise<Sale | null> {

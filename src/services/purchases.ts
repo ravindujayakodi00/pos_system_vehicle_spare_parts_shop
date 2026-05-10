@@ -1,15 +1,34 @@
 import { getSupabaseClient } from "@/lib/supabase";
-import { PurchaseOrder } from "@/lib/types";
+import { PurchaseOrder, PaginatedResponse } from "@/lib/types";
 import { generatePONumber } from "@/lib/utils";
 
 export const purchasesService = {
-  async getPurchaseOrders(): Promise<PurchaseOrder[]> {
-    const { data, error } = await getSupabaseClient()
+  async getPurchaseOrders(
+    page = 1,
+    limit = 50,
+    searchQuery?: string
+  ): Promise<PaginatedResponse<PurchaseOrder>> {
+    let query = getSupabaseClient()
       .from("purchase_orders")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*", { count: "exact" });
+
+    if (searchQuery) {
+      query = query.or(`po_number.ilike.%${searchQuery}%,supplier_name.ilike.%${searchQuery}%`);
+    }
+
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range((page - 1) * limit, page * limit - 1);
+
     if (error) throw error;
-    return data ?? [];
+    
+    return {
+      data: data ?? [],
+      count: count ?? 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count ?? 0) / limit),
+    };
   },
 
   async getPurchaseOrderById(id: string): Promise<PurchaseOrder | null> {

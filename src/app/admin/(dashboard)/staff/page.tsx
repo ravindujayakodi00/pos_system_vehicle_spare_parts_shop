@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, UserCog, KeyRound } from "lucide-react";
+import { Plus, UserCog, KeyRound, Search } from "lucide-react";
 import { staffService } from "@/services/staff";
 import { StaffMember, Role } from "@/lib/types";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/lib/auth";
 import { Modal } from "@/components/shared/Modal";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
+import { PhoneInput } from "@/components/shared/PhoneInput";
+import { Pagination } from "@/components/shared/Pagination";
 
 const roleColors: Record<string, string> = {
   owner: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
@@ -27,6 +29,10 @@ export default function StaffPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [visibleRoles, setVisibleRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editMember, setEditMember] = useState<StaffMember | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<StaffMember | null>(null);
@@ -39,22 +45,30 @@ export default function StaffPage() {
   const { isOwner } = useAuth();
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      const [staffData, roles] = await Promise.all([
-        staffService.getStaff(),
+      const [staffDataRes, roles] = await Promise.all([
+        staffService.getStaff(page, 50, searchQuery),
         staffService.getVisibleRoles(),
       ]);
-      // Only show staff members whose role is visible
-      setStaff(staffData.filter((m) => m.role?.is_visible !== false));
+      // The server already filters to only return staff members whose role is visible
+      setStaff(staffDataRes.data);
+      setTotalRecords(staffDataRes.count);
+      setTotalPages(staffDataRes.totalPages);
       setVisibleRoles(roles);
     } catch {
       showToast("Failed to load staff", "error");
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [page, searchQuery, showToast]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchData]);
 
   const openAdd = () => {
     setEditMember(null);
@@ -146,10 +160,40 @@ export default function StaffPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Staff</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your team</p>
           </div>
-          <button onClick={openAdd} className="btn-primary px-4 py-2 text-sm flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Add Staff
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="relative hidden sm:block w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search staff..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <button onClick={openAdd} className="btn-primary px-4 py-2 text-sm flex items-center gap-2 whitespace-nowrap">
+              <Plus className="w-4 h-4" />
+              Add Staff
+            </button>
+          </div>
+        </div>
+        
+        {/* Mobile search */}
+        <div className="sm:hidden relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search staff..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -216,6 +260,14 @@ export default function StaffPage() {
             ))
           )}
         </div>
+
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalRecords={totalRecords}
+          limit={50}
+          onPageChange={setPage}
+        />
       </div>
 
       <Modal open={showForm} onClose={() => setShowForm(false)} title={editMember ? "Edit Staff Member" : "Add Staff Member"} maxWidth="sm">
@@ -226,7 +278,11 @@ export default function StaffPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone <span className="text-red-500">*</span></label>
-            <input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+            <PhoneInput
+              value={form.phone}
+              onChange={(v) => setForm((p) => ({ ...p, phone: v }))}
+              required
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email {!editMember && <span className="text-red-500">*</span>}</label>
