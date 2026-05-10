@@ -94,7 +94,7 @@ export default function SuppliersPage() {
       };
 
       if (editingSupplier) {
-        const updated = await suppliersService.updateSupplier(editingSupplier.id, payload);
+        await suppliersService.updateSupplier(editingSupplier.id, payload);
         showToast("Supplier updated", "success");
         loadSuppliers();
       } else {
