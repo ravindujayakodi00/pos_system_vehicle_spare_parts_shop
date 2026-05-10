@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data } = await getSupabaseClient()
         .from("staff")
-        .select("*")
+        .select("*, role:roles(*)")
         .eq("user_id", userId)
         .single();
       return data as User | null;
@@ -100,8 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         login,
         logout,
-        isOwner: user?.role === "owner",
-        isReceptionist: user?.role === "receptionist",
+        isOwner: user?.role?.name === "owner" || user?.role?.name === "developer",
+        isReceptionist: user?.role?.name === "receptionist",
       }}
     >
       {children}

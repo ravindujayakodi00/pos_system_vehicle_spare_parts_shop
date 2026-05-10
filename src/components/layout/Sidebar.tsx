@@ -23,7 +23,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-3 px-6 py-5 h-20 border-b border-gray-200 dark:border-gray-700">
         <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
           <Wrench className="w-5 h-5 text-white" />
         </div>
@@ -32,7 +32,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             Spare Parts POS
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 truncate capitalize">
-            {user?.role ?? "—"}
+            {user?.role?.name ?? "—"}
           </p>
         </div>
       </div>

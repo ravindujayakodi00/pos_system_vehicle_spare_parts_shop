@@ -1,10 +1,17 @@
-// User & Auth Types
-export type UserRole = "owner" | "receptionist";
+// Role Types
+export interface Role {
+  id: string;
+  name: string;
+  is_visible: boolean;
+  created_at: string;
+}
 
+// User & Auth Types
 export interface User {
   id: string;
   email: string;
-  role: UserRole;
+  role_id: string;
+  role: Role;
   name: string;
   phone?: string;
   is_active: boolean;
@@ -157,7 +164,8 @@ export interface StaffMember {
   id: string;
   user_id?: string;
   name: string;
-  role: UserRole;
+  role_id: string;
+  role: Role;
   phone: string;
   email?: string;
   salary?: number;

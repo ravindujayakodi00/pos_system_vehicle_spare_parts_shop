@@ -4,7 +4,7 @@ import { Customer } from "@/lib/types";
 export const customersService = {
   async getCustomers(): Promise<Customer[]> {
     const { data, error } = await getSupabaseClient()
-      .from("customers")
+      .from("customers_with_totals")
       .select("*")
       .order("name");
     if (error) throw error;

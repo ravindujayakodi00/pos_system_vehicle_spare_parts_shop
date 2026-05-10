@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search, Trash2, ShoppingCart, Plus, Minus, Tag } from "lucide-react";
+import { Search, Trash2, ShoppingCart, Plus, Minus, Tag, UserPlus, X } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { productsService } from "@/services/products";
 import { salesService } from "@/services/sales";
 import { inventoryService } from "@/services/inventory";
 import { settingsService } from "@/services/settings";
+import { customersService } from "@/services/customers";
 import { InvoiceModal } from "@/components/pos/InvoiceModal";
-import { Product, Sale, ShopSettings, PaymentMethod } from "@/lib/types";
+import { Modal } from "@/components/shared/Modal";
+import { Product, Sale, ShopSettings, PaymentMethod, Customer } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 interface CartItem {
@@ -23,7 +25,14 @@ export default function POSPage() {
   const [searching, setSearching] = useState(false);
   const [foundProduct, setFoundProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [customerName, setCustomerName] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerResults, setCustomerResults] = useState<Customer[]>([]);
+  const [searchingCustomer, setSearchingCustomer] = useState(false);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState({ name: "", phone: "", email: "", vehicle_info: "" });
+  const [savingCustomer, setSavingCustomer] = useState(false);
   const [discountAmount, setDiscountAmount] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [amountPaid, setAmountPaid] = useState("0");
@@ -80,6 +89,78 @@ export default function POSPage() {
     }
   }, []);
 
+  const customerSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleCustomerSearch = (query: string) => {
+    setCustomerQuery(query);
+    setSelectedCustomer(null);
+    if (customerSearchTimeout.current) clearTimeout(customerSearchTimeout.current);
+
+    if (query.trim().length < 2) {
+      setCustomerResults([]);
+      setShowCustomerDropdown(false);
+      return;
+    }
+
+    setShowCustomerDropdown(true);
+    customerSearchTimeout.current = setTimeout(async () => {
+      setSearchingCustomer(true);
+      try {
+        const results = await customersService.searchCustomers(query.trim());
+        setCustomerResults(results);
+      } catch {
+        setCustomerResults([]);
+      } finally {
+        setSearchingCustomer(false);
+      }
+    }, 300);
+  };
+
+  const selectCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setCustomerQuery(customer.phone);
+    setShowCustomerDropdown(false);
+    setCustomerResults([]);
+  };
+
+  const clearCustomer = () => {
+    setSelectedCustomer(null);
+    setCustomerQuery("");
+    setCustomerResults([]);
+    setShowCustomerDropdown(false);
+  };
+
+  const openNewCustomerModal = () => {
+    setNewCustomerForm({ name: "", phone: customerQuery, email: "", vehicle_info: "" });
+    setShowNewCustomerModal(true);
+    setShowCustomerDropdown(false);
+  };
+
+  const handleCreateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustomerForm.name.trim() || !newCustomerForm.phone.trim()) {
+      showToast("Name and phone are required", "error");
+      return;
+    }
+    setSavingCustomer(true);
+    try {
+      const customer = await customersService.createCustomer({
+        name: newCustomerForm.name.trim(),
+        phone: newCustomerForm.phone.trim(),
+        email: newCustomerForm.email.trim() || undefined,
+        vehicle_info: newCustomerForm.vehicle_info.trim() || undefined,
+        is_active: true,
+      });
+      selectCustomer(customer);
+      setShowNewCustomerModal(false);
+      showToast("Customer added", "success");
+    } catch {
+      showToast("Failed to add customer", "error");
+    } finally {
+      setSavingCustomer(false);
+    }
+  };
+
   const addToCart = (product: Product) => {
     if (product.stock_quantity <= 0) {
       showToast(`${product.name} is out of stock`, "error");
@@ -120,7 +201,7 @@ export default function POSPage() {
 
   const clearCart = () => {
     setCart([]);
-    setCustomerName("");
+    clearCustomer();
     setDiscountAmount("0");
     setAmountPaid("0");
     searchRef.current?.focus();
@@ -146,7 +227,8 @@ export default function POSPage() {
       }));
 
       const sale = await salesService.createSale({
-        customer_name: customerName.trim() || undefined,
+        customer_id: selectedCustomer?.id,
+        customer_name: selectedCustomer?.name,
         items: saleItems,
         payment_method: paymentMethod,
         amount_paid: paymentMethod === "cash" ? paid : grandTotal,
@@ -299,7 +381,7 @@ export default function POSPage() {
         </div>
 
         {/* RIGHT: Cart */}
-        <div className="w-full lg:w-96 surface-panel flex flex-col gap-0 overflow-hidden">
+        <div className="w-full lg:w-[28rem] lg:max-h-[calc(100vh-7rem)] surface-panel flex flex-col gap-0 overflow-hidden flex-shrink-0">
           {/* Cart header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2">
@@ -318,15 +400,56 @@ export default function POSPage() {
             )}
           </div>
 
-          {/* Customer name */}
+          {/* Customer search */}
           <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-            <input
-              type="text"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="Customer name (optional)"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            {selectedCustomer ? (
+              <div className="flex items-center justify-between px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{selectedCustomer.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{selectedCustomer.phone}</p>
+                </div>
+                <button onClick={clearCustomer} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  type="text"
+                  value={customerQuery}
+                  onChange={(e) => handleCustomerSearch(e.target.value)}
+                  onFocus={() => { if (customerQuery.trim().length >= 2) setShowCustomerDropdown(true); }}
+                  placeholder="Search customer by name or phone..."
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {searchingCustomer && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                )}
+                {showCustomerDropdown && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                    {customerResults.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => selectCustomer(c)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
+                      >
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{c.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{c.phone}</p>
+                      </button>
+                    ))}
+                    {!searchingCustomer && (
+                      <button
+                        onClick={openNewCustomerModal}
+                        className="w-full text-left px-3 py-2.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors flex items-center gap-2 text-green-600 dark:text-green-400"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        <span className="text-sm font-medium">Add New Customer</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Cart items */}
@@ -468,6 +591,33 @@ export default function POSPage() {
         sale={invoiceSale}
         settings={settings}
       />
+
+      <Modal open={showNewCustomerModal} onClose={() => setShowNewCustomerModal(false)} title="Add New Customer" maxWidth="sm">
+        <form onSubmit={handleCreateCustomer} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name <span className="text-red-500">*</span></label>
+            <input value={newCustomerForm.name} onChange={(e) => setNewCustomerForm((p) => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone <span className="text-red-500">*</span></label>
+            <input value={newCustomerForm.phone} onChange={(e) => setNewCustomerForm((p) => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+            <input type="email" value={newCustomerForm.email} onChange={(e) => setNewCustomerForm((p) => ({ ...p, email: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vehicle Info</label>
+            <input value={newCustomerForm.vehicle_info} onChange={(e) => setNewCustomerForm((p) => ({ ...p, vehicle_info: e.target.value }))} placeholder="e.g. Toyota Corolla 2020" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="flex gap-3 justify-end">
+            <button type="button" onClick={() => setShowNewCustomerModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg">Cancel</button>
+            <button type="submit" disabled={savingCustomer} className="btn-primary px-5 py-2 text-sm font-semibold disabled:opacity-50">
+              {savingCustomer ? "Adding..." : "Add & Select"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

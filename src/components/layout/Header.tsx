@@ -20,7 +20,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   );
 
   return (
-    <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 h-16 flex items-center gap-4">
+    <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 h-20 flex items-center gap-4">
       <button
         onClick={onMenuClick}
         className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"

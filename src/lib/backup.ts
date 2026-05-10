@@ -16,7 +16,7 @@ export async function exportSalesReport(date: string): Promise<void> {
   }
 
   // Dynamic import to keep XLSX out of the initial bundle
-  const XLSX = (await import("xlsx")).default;
+  const XLSX = await import("xlsx");
 
   // Build flat rows for the spreadsheet
   const rows: Record<string, string | number>[] = [];

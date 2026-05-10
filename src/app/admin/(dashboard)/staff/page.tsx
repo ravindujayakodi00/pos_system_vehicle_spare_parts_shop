@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, UserCog } from "lucide-react";
+import { Plus, UserCog, KeyRound } from "lucide-react";
 import { staffService } from "@/services/staff";
-import { StaffMember, UserRole } from "@/lib/types";
+import { StaffMember, Role } from "@/lib/types";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/lib/auth";
 import { Modal } from "@/components/shared/Modal";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 
@@ -13,23 +14,39 @@ const roleColors: Record<string, string> = {
   receptionist: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
 };
 
-const emptyForm = { name: "", phone: "", email: "", role: "receptionist" as UserRole };
+interface StaffForm {
+  name: string;
+  phone: string;
+  email: string;
+  role_id: string;
+}
+
+const emptyForm: StaffForm = { name: "", phone: "", email: "", role_id: "" };
 
 export default function StaffPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [visibleRoles, setVisibleRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editMember, setEditMember] = useState<StaffMember | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<StaffMember | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<StaffForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+  const [resetTarget, setResetTarget] = useState<StaffMember | null>(null);
+  const [resetting, setResetting] = useState(false);
   const { showToast } = useToast();
+  const { isOwner } = useAuth();
 
-  const fetchStaff = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const data = await staffService.getStaff();
-      setStaff(data);
+      const [staffData, roles] = await Promise.all([
+        staffService.getStaff(),
+        staffService.getVisibleRoles(),
+      ]);
+      // Only show staff members whose role is visible
+      setStaff(staffData.filter((m) => m.role?.is_visible !== false));
+      setVisibleRoles(roles);
     } catch {
       showToast("Failed to load staff", "error");
     } finally {
@@ -37,13 +54,31 @@ export default function StaffPage() {
     }
   }, [showToast]);
 
-  useEffect(() => { fetchStaff(); }, [fetchStaff]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  const openAdd = () => { setEditMember(null); setForm(emptyForm); setShowForm(true); };
+  const openAdd = () => {
+    setEditMember(null);
+    setForm({ ...emptyForm, role_id: visibleRoles[0]?.id ?? "" });
+    setShowForm(true);
+  };
   const openEdit = (m: StaffMember) => {
     setEditMember(m);
-    setForm({ name: m.name, phone: m.phone, email: m.email ?? "", role: m.role });
+    setForm({ name: m.name, phone: m.phone, email: m.email ?? "", role_id: m.role_id });
     setShowForm(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetTarget?.user_id) return;
+    setResetting(true);
+    try {
+      await staffService.resetPassword(resetTarget.user_id);
+      showToast(`Password reset to default for ${resetTarget.name}`, "success");
+      setResetTarget(null);
+    } catch {
+      showToast("Failed to reset password", "error");
+    } finally {
+      setResetting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,26 +87,37 @@ export default function StaffPage() {
       showToast("Name and phone are required", "error");
       return;
     }
+    if (!editMember && !form.email.trim()) {
+      showToast("Email is required for new staff members", "error");
+      return;
+    }
+    if (!form.role_id) {
+      showToast("Please select a role", "error");
+      return;
+    }
     setSaving(true);
     try {
-      const payload = {
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim() || undefined,
-        role: form.role,
-        is_active: true,
-      };
       if (editMember) {
-        await staffService.updateStaff(editMember.id, payload);
+        await staffService.updateStaff(editMember.id, {
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim() || undefined,
+          role_id: form.role_id,
+        });
         showToast("Staff member updated", "success");
       } else {
-        await staffService.createStaff(payload);
+        await staffService.createStaff({
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          role_id: form.role_id,
+        });
         showToast("Staff member added", "success");
       }
       setShowForm(false);
-      fetchStaff();
-    } catch {
-      showToast("Failed to save staff member", "error");
+      fetchData();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to save staff member", "error");
     } finally {
       setSaving(false);
     }
@@ -84,7 +130,7 @@ export default function StaffPage() {
       await staffService.deactivateStaff(deactivateTarget.id);
       showToast("Staff member deactivated", "success");
       setDeactivateTarget(null);
-      fetchStaff();
+      fetchData();
     } catch {
       showToast("Failed to deactivate staff member", "error");
     } finally {
@@ -137,8 +183,8 @@ export default function StaffPage() {
                     <p className="font-semibold text-gray-900 dark:text-white truncate">{member.name}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{member.phone}</p>
                   </div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${roleColors[member.role] ?? ""}`}>
-                    {member.role}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${roleColors[member.role?.name] ?? "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>
+                    {member.role?.name}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -148,6 +194,15 @@ export default function StaffPage() {
                   >
                     Edit
                   </button>
+                  {isOwner && member.user_id && (
+                    <button
+                      onClick={() => setResetTarget(member)}
+                      className="py-1.5 px-2 text-xs font-medium text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-700 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                      title="Reset password to default"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   {member.is_active && (
                     <button
                       onClick={() => setDeactivateTarget(member)}
@@ -174,14 +229,16 @@ export default function StaffPage() {
             <input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-            <input type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email {!editMember && <span className="text-red-500">*</span>}</label>
+            <input type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} required={!editMember} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            {!editMember && <p className="text-xs text-gray-400 mt-1">A login account will be created with default password: default@123</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
-            <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value as UserRole }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="receptionist">Receptionist</option>
-              <option value="owner">Owner</option>
+            <select value={form.role_id} onChange={(e) => setForm((p) => ({ ...p, role_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+              {visibleRoles.map((role) => (
+                <option key={role.id} value={role.id}>{role.name.charAt(0).toUpperCase() + role.name.slice(1)}</option>
+              ))}
             </select>
           </div>
           <div className="flex gap-3 justify-end">
@@ -201,6 +258,17 @@ export default function StaffPage() {
         message={`Are you sure you want to deactivate "${deactivateTarget?.name}"?`}
         confirmLabel="Deactivate"
         loading={deactivating}
+        variant="warning"
+      />
+
+      <ConfirmationDialog
+        open={!!resetTarget}
+        onClose={() => setResetTarget(null)}
+        onConfirm={handleResetPassword}
+        title="Reset Password"
+        message={`Reset password for "${resetTarget?.name}" to the default (default@123)?`}
+        confirmLabel="Reset Password"
+        loading={resetting}
         variant="warning"
       />
     </>
