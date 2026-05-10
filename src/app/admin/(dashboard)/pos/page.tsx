@@ -39,6 +39,7 @@ export default function POSPage() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [invoiceSale, setInvoiceSale] = useState<Sale | null>(null);
   const [settings, setSettings] = useState<Partial<ShopSettings> | null>(null);
+  const [mobileTab, setMobileTab] = useState<"search" | "cart">("search");
   const searchRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
@@ -184,6 +185,7 @@ export default function POSPage() {
     setSearchCode("");
     setFoundProduct(null);
     setSearchResults([]);
+    // On mobile, stay on search tab so user can keep adding items
     searchRef.current?.focus();
   };
 
@@ -272,9 +274,35 @@ export default function POSPage() {
 
   return (
     <>
+      {/* Mobile tab bar */}
+      <div className="flex lg:hidden mb-3 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <button
+          onClick={() => setMobileTab("search")}
+          className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+            mobileTab === "search"
+              ? "bg-blue-600 text-white"
+              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+          }`}
+        >
+          <Search className="w-4 h-4" />
+          Search
+        </button>
+        <button
+          onClick={() => setMobileTab("cart")}
+          className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${
+            mobileTab === "cart"
+              ? "bg-blue-600 text-white"
+              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+          }`}
+        >
+          <ShoppingCart className="w-4 h-4" />
+          Cart {cart.length > 0 && <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${ mobileTab === "cart" ? "bg-white/30 text-white" : "bg-blue-600 text-white"}`}>{cart.length}</span>}
+        </button>
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-4 h-full min-h-0">
         {/* LEFT: Product Search */}
-        <div className="flex-1 flex flex-col gap-4 min-h-0">
+        <div className={`flex-1 flex flex-col gap-4 min-h-0 ${ mobileTab === "cart" ? "hidden lg:flex" : "flex" }`}>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex-shrink-0">
             Point of Sale
           </h1>
@@ -381,7 +409,7 @@ export default function POSPage() {
         </div>
 
         {/* RIGHT: Cart */}
-        <div className="w-full lg:w-[28rem] lg:max-h-[calc(100vh-7rem)] surface-panel flex flex-col gap-0 overflow-hidden flex-shrink-0">
+        <div className={`w-full lg:w-[28rem] lg:max-h-[calc(100vh-7rem)] surface-panel flex-col gap-0 overflow-hidden flex-shrink-0 ${ mobileTab === "search" ? "hidden lg:flex" : "flex" }`}>
           {/* Cart header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2">
