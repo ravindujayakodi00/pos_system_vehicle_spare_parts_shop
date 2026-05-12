@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vehicle Spare Parts POS",
-  description: "Point of Sale System for Vehicle Spare Parts Shop",
+  title: "Seoul Motors",
+  description: "Point of Sale System for Seoul Motors",
 };
 
 export default function RootLayout({

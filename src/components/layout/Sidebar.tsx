@@ -29,7 +29,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </div>
         <div className="min-w-0">
           <p className="font-bold text-sm text-gray-900 dark:text-white truncate">
-            Spare Parts POS
+            Seoul Motors
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 truncate capitalize">
             {user?.role?.name ?? "—"}

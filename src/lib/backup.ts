@@ -1,14 +1,10 @@
 import { reportsService } from "@/services/reports";
 
-const LAST_BACKUP_KEY = "pos_last_backup_date";
-
 export async function exportSalesReport(date: string): Promise<void> {
   const sales = await reportsService.getSalesForDate(date);
 
   if (sales.length === 0) {
-    console.log(`[Backup] No sales found for ${date}`);
-    localStorage.setItem(LAST_BACKUP_KEY, date);
-    return;
+    throw new Error(`No sales found for ${date}`);
   }
 
   // Dynamic import to keep XLSX out of the initial bundle
@@ -67,7 +63,6 @@ export async function exportSalesReport(date: string): Promise<void> {
   const fileName = `sales_backup_${date}.xlsx`;
   XLSX.writeFile(wb, fileName);
 
-  localStorage.setItem(LAST_BACKUP_KEY, date);
   console.log(`[Backup] Exported ${sales.length} sales to ${fileName}`);
 }
 
