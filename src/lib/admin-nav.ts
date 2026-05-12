@@ -18,6 +18,7 @@ export interface NavItem {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: React.ComponentType<any>;
   ownerOnly?: boolean;
+  disabled?: boolean;
 }
 
 export const adminNavItems: NavItem[] = [
@@ -26,9 +27,9 @@ export const adminNavItems: NavItem[] = [
   { label: "Sales", href: "/admin/sales", icon: FileText },
   { label: "Products", href: "/admin/products", icon: Package },
   { label: "Inventory", href: "/admin/inventory", icon: Layers },
-  { label: "Purchase Orders", href: "/admin/purchases", icon: ShoppingBag },
+  // { label: "Purchase Orders", href: "/admin/purchases", icon: ShoppingBag },
   { label: "Customers", href: "/admin/customers", icon: Users },
-  { label: "Suppliers", href: "/admin/suppliers", icon: Truck },
+  // { label: "Suppliers", href: "/admin/suppliers", icon: Truck },
   { label: "Staff", href: "/admin/staff", icon: UserCog, ownerOnly: true },
   { label: "Reports", href: "/admin/reports", icon: BarChart2, ownerOnly: true },
   { label: "Settings", href: "/admin/settings", icon: Settings },

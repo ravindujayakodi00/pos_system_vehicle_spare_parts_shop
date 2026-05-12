@@ -9,6 +9,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/admin/dashboard", request.url));
   }
 
+  // Block disabled routes: Suppliers and Purchase Orders
+  if (pathname.startsWith("/admin/suppliers") || pathname.startsWith("/admin/purchases")) {
+    return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+  }
+
   // Refresh Supabase session on every request so it doesn't expire silently
   let supabaseResponse = NextResponse.next({ request });
 
