@@ -1,10 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { Modal } from "@/components/shared/Modal";
 import { Sale, ShopSettings } from "@/lib/types";
 import { printReceipt } from "@/lib/print";
 import { formatDateTime } from "@/lib/utils";
 import { Printer } from "lucide-react";
+import logoBlack from "@/assets/logo-black.png";
 
 interface InvoiceModalProps {
   open: boolean;
@@ -14,13 +16,26 @@ interface InvoiceModalProps {
 }
 
 export function InvoiceModal({ open, onClose, sale, settings }: InvoiceModalProps) {
-  if (!sale) return null;
+  const logo = logoBlack;
 
+  if (!sale) return null;
   const currency = settings?.currency ?? "Rs.";
   const items = sale.items ?? [];
 
-  const handlePrint = () => {
-    printReceipt(sale, settings);
+  const handlePrint = async () => {
+    let logoBase64: string | undefined;
+    try {
+      const res = await fetch(logo.src);
+      const blob = await res.blob();
+      logoBase64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      // logo unavailable — print without it
+    }
+    printReceipt(sale, settings, logoBase64);
   };
 
   return (
@@ -28,8 +43,11 @@ export function InvoiceModal({ open, onClose, sale, settings }: InvoiceModalProp
       <div className="space-y-4">
         {/* Header */}
         <div className="text-center pb-3 border-b border-gray-200 dark:border-gray-600">
+          <div className="flex justify-center mb-2">
+            <Image src={logo} alt="Seoul Motors" width={88} height={88} className="object-contain" />
+          </div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            {settings?.shop_name ?? "Spare Parts Shop"}
+            {settings?.shop_name ?? "Seoul Motors"}
           </h2>
           {settings?.address && (
             <p className="text-xs text-gray-500 dark:text-gray-400">{settings.address}</p>

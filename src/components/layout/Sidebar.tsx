@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { adminNavItems } from "@/lib/admin-nav";
 import { useAuth } from "@/lib/auth";
-import { Wrench, X, LogOut } from "lucide-react";
+import { X, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logoBlack from "@/assets/logo-black.png";
+import logoWhite from "@/assets/logo-white.png";
 
 interface SidebarProps {
   open: boolean;
@@ -24,8 +27,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 h-20 border-b border-gray-200 dark:border-gray-700">
-        <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-          <Wrench className="w-5 h-5 text-white" />
+        <div className="w-12 h-12 flex-shrink-0">
+          <Image src={logoBlack} alt="Seoul Motors" width={48} height={48} className="rounded-xl object-contain dark:hidden" />
+          <Image src={logoWhite} alt="Seoul Motors" width={48} height={48} className="rounded-xl object-contain hidden dark:block" />
         </div>
         <div className="min-w-0">
           <p className="font-bold text-sm text-gray-900 dark:text-white truncate">

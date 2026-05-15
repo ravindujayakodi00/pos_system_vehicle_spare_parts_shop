@@ -84,7 +84,7 @@ export function ProductFormModal({
   };
 
   const validate = (): string | null => {
-    if (form.part_number.length !== 6) return "Product code must be exactly 6 characters.";
+    if (form.part_number.length === 0 || form.part_number.length > 10) return "Product code must be between 1 and 10 characters.";
     if (!form.name.trim()) return "Product name is required.";
     if (!form.category) return "Category is required.";
     if (isNaN(Number(form.cost_price)) || Number(form.cost_price) < 0) return "Invalid buying price.";
@@ -143,22 +143,22 @@ export function ProductFormModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Part Code <span className="text-red-500">*</span>
-              <span className="text-xs font-normal text-gray-400 ml-1">(6 chars)</span>
+              <span className="text-xs font-normal text-gray-400 ml-1">(max 10 chars)</span>
             </label>
             <input
               name="part_number"
               value={form.part_number}
               onChange={handleChange}
-              maxLength={6}
+              maxLength={10}
               placeholder="ABC123"
               className={`w-full px-3 py-2 border rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase font-mono ${
-                form.part_number.length > 0 && form.part_number.length !== 6
+                form.part_number.length > 10
                   ? "border-red-400"
                   : "border-gray-300 dark:border-gray-600"
               }`}
               required
             />
-            <p className="text-xs text-gray-400 mt-0.5">{form.part_number.length}/6</p>
+            <p className="text-xs text-gray-400 mt-0.5">{form.part_number.length}/10</p>
           </div>
 
           {/* Unit */}

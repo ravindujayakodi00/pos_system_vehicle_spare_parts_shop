@@ -1,8 +1,8 @@
 import { Sale, ShopSettings } from "@/lib/types";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
-export function printReceipt(sale: Sale, settings: Partial<ShopSettings> | null): void {
-  const shopName = settings?.shop_name ?? "Spare Parts Shop";
+export function printReceipt(sale: Sale, settings: Partial<ShopSettings> | null, logoBase64?: string): void {
+  const shopName = settings?.shop_name ?? "Seoul Motors";
   const address = settings?.address ?? "";
   const phone = settings?.phone ?? "";
   const currency = settings?.currency ?? "Rs.";
@@ -44,6 +44,7 @@ export function printReceipt(sale: Sale, settings: Partial<ShopSettings> | null)
   </style>
 </head>
 <body>
+  ${logoBase64 ? `<div class="center" style="margin-bottom:4px"><img src="${logoBase64}" alt="logo" style="width:80px;height:80px;object-fit:contain;" /></div>` : ""}
   <div class="shop-name">${shopName}</div>
   ${address ? `<div class="center">${address}</div>` : ""}
   ${phone ? `<div class="center">Tel: ${phone}</div>` : ""}

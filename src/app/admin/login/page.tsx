@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/context/ToastContext";
-import { Wrench } from "lucide-react";
+import logoBlack from "@/assets/logo-black.png";
+import logoWhite from "@/assets/logo-white.png";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -53,8 +55,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="surface-panel p-8">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-4">
-              <Wrench className="w-8 h-8 text-white" />
+            <div className="w-28 h-28 mb-4">
+              <Image src={logoBlack} alt="Seoul Motors" width={112} height={112} className="rounded-2xl object-contain dark:hidden" />
+              <Image src={logoWhite} alt="Seoul Motors" width={112} height={112} className="rounded-2xl object-contain hidden dark:block" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Seoul Motors

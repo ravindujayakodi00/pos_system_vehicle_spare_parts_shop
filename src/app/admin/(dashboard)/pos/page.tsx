@@ -64,8 +64,8 @@ export default function POSPage() {
 
     if (!query.trim()) return;
 
-    // If exactly 6 chars, try exact code lookup
-    if (query.length === 6) {
+    // If query could be a product code (up to 10 chars), try exact code lookup
+    if (query.length <= 10) {
       setSearching(true);
       try {
         const product = await productsService.getProductByCode(query);
