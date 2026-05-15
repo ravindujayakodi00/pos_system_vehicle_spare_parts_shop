@@ -2,6 +2,11 @@ import { getSupabaseClient } from "@/lib/supabase";
 import { Sale, SaleItem, PaginatedResponse } from "@/lib/types";
 import { generateInvoiceNumber } from "@/lib/utils";
 
+export interface ReturnItem {
+  product_id: string;
+  quantity: number;
+}
+
 interface CreateSalePayload {
   customer_id?: string;
   customer_name?: string;
@@ -16,7 +21,9 @@ export const salesService = {
   async getSales(
     page = 1,
     limit = 50,
-    searchQuery?: string
+    searchQuery?: string,
+    dateFrom?: string,
+    dateTo?: string
   ): Promise<PaginatedResponse<Sale>> {
     let query = getSupabaseClient()
       .from("sales")
@@ -24,6 +31,12 @@ export const salesService = {
 
     if (searchQuery) {
       query = query.or(`invoice_number.ilike.%${searchQuery}%,customer_name.ilike.%${searchQuery}%`);
+    }
+    if (dateFrom) {
+      query = query.gte("created_at", `${dateFrom}T00:00:00`);
+    }
+    if (dateTo) {
+      query = query.lte("created_at", `${dateTo}T23:59:59`);
     }
 
     const { data, error, count } = await query
@@ -105,5 +118,55 @@ export const salesService = {
       .update({ status: "refunded" })
       .eq("id", id);
     if (error) throw error;
+  },
+
+  async getReturnedQuantities(saleId: string): Promise<Record<string, number>> {
+    const { data, error } = await getSupabaseClient()
+      .from("inventory_transactions")
+      .select("product_id, quantity")
+      .eq("type", "return")
+      .eq("reference_id", saleId);
+    if (error) throw error;
+
+    const result: Record<string, number> = {};
+    for (const row of data ?? []) {
+      result[row.product_id] = (result[row.product_id] ?? 0) + row.quantity;
+    }
+    return result;
+  },
+
+  async returnSaleItems(saleId: string, items: ReturnItem[], sale: Sale): Promise<void> {
+    const sb = getSupabaseClient();
+
+    // Restore inventory for each returned item and log the transaction
+    for (const item of items) {
+      const { error: txError } = await sb.from("inventory_transactions").insert({
+        product_id: item.product_id,
+        type: "return",
+        quantity: item.quantity,
+        reference_id: saleId,
+        reference_type: "sale",
+        notes: `Return from invoice ${sale.invoice_number}`,
+      });
+      if (txError) throw txError;
+
+      const { error: stockError } = await sb.rpc("increment_stock", {
+        product_id: item.product_id,
+        amount: item.quantity,
+      });
+      if (stockError) throw stockError;
+    }
+
+    // Check if all sale items are now fully returned
+    const returnedQtys = await this.getReturnedQuantities(saleId);
+    const saleItems = sale.items ?? [];
+    const allReturned = saleItems.every(
+      (si) => (returnedQtys[si.product_id] ?? 0) >= si.quantity
+    );
+
+    if (allReturned) {
+      const { error } = await sb.from("sales").update({ status: "refunded" }).eq("id", saleId);
+      if (error) throw error;
+    }
   },
 };
