@@ -188,6 +188,7 @@ export interface ShopSettings {
   id: string;
   shop_name: string;
   phone: string;
+  phone2?: string;
   email?: string;
   address?: string;
   currency: string;

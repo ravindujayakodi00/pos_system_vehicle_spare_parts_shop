@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { FileText, Search, RotateCcw, X } from "lucide-react";
+import { FileText, Search, RotateCcw, X, Receipt } from "lucide-react";
 import { salesService } from "@/services/sales";
-import { Sale } from "@/lib/types";
+import { settingsService } from "@/services/settings";
+import { Sale, ShopSettings } from "@/lib/types";
 import { useToast } from "@/context/ToastContext";
 import { Pagination } from "@/components/shared/Pagination";
 import { SaleReturnModal } from "@/components/sales/SaleReturnModal";
+import { InvoiceModal } from "@/components/pos/InvoiceModal";
 import { formatCurrency } from "@/lib/utils";
 
 export default function SalesPage() {
@@ -19,7 +21,13 @@ export default function SalesPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [returnSale, setReturnSale] = useState<Sale | null>(null);
+  const [invoiceSale, setInvoiceSale] = useState<Sale | null>(null);
+  const [settings, setSettings] = useState<Partial<ShopSettings> | null>(null);
   const { showToast } = useToast();
+
+  useEffect(() => {
+    settingsService.getSettings().then(setSettings).catch(() => {});
+  }, []);
 
   const fetchSales = useCallback(async () => {
     setLoading(true);
@@ -41,6 +49,15 @@ export default function SalesPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [fetchSales]);
+
+  const openInvoice = async (sale: Sale) => {
+    try {
+      const full = await salesService.getSaleById(sale.id);
+      setInvoiceSale(full);
+    } catch {
+      showToast("Failed to load invoice", "error");
+    }
+  };
 
   const statusColors: Record<string, string> = {
     completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
@@ -149,15 +166,24 @@ export default function SalesPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    {sale.status !== "refunded" && (
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setReturnSale(sale)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        onClick={() => openInvoice(sale)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                       >
-                        <RotateCcw className="w-3 h-3" />
-                        Return
+                        <Receipt className="w-3 h-3" />
+                        Invoice
                       </button>
-                    )}
+                      {sale.status !== "refunded" && (
+                        <button
+                          onClick={() => setReturnSale(sale)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          Return
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -182,6 +208,13 @@ export default function SalesPage() {
           onReturned={fetchSales}
         />
       )}
+
+      <InvoiceModal
+        open={!!invoiceSale}
+        onClose={() => setInvoiceSale(null)}
+        sale={invoiceSale}
+        settings={settings}
+      />
     </div>
   );
 }

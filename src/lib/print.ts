@@ -2,9 +2,11 @@ import { Sale, ShopSettings } from "@/lib/types";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
 export function printReceipt(sale: Sale, settings: Partial<ShopSettings> | null, logoBase64?: string): void {
-  const shopName = settings?.shop_name ?? "Seoul Motors";
-  const address = settings?.address ?? "";
-  const phone = settings?.phone ?? "";
+  const shopName = settings?.shop_name || "Seoul Motors";
+  const address = settings?.address || "411/2/b Makubura, Pannipitiya";
+  const formatPhone = (p: string) => p.startsWith("+94") ? "0" + p.slice(3) : p;
+  const phone = formatPhone(settings?.phone || "0770460529");
+  const phone2 = formatPhone(settings?.phone2 || "0740800274");
   const currency = settings?.currency ?? "Rs.";
 
   const items = sale.items ?? [];
@@ -46,8 +48,8 @@ export function printReceipt(sale: Sale, settings: Partial<ShopSettings> | null,
 <body>
   ${logoBase64 ? `<div class="center" style="margin-bottom:4px"><img src="${logoBase64}" alt="logo" style="width:80px;height:80px;object-fit:contain;" /></div>` : ""}
   <div class="shop-name">${shopName}</div>
-  ${address ? `<div class="center">${address}</div>` : ""}
-  ${phone ? `<div class="center">Tel: ${phone}</div>` : ""}
+  <div class="center">${address}</div>
+  <div class="center">Tel: ${phone}${phone2 ? ` / ${phone2}` : ""}</div>
 
   <div class="divider"></div>
 

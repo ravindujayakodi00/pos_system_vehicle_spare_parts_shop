@@ -12,6 +12,7 @@ import { PhoneInput } from "@/components/shared/PhoneInput";
 export default function SettingsPage() {
   const [shopName, setShopName] = useState("");
   const [phone, setPhone] = useState("");
+  const [phone2, setPhone2] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [taxRate, setTaxRate] = useState("0");
@@ -32,6 +33,7 @@ export default function SettingsPage() {
       if (s) {
         setShopName(s.shop_name);
         setPhone(s.phone);
+        setPhone2(s.phone2 ?? "");
         setEmail(s.email ?? "");
         setAddress(s.address ?? "");
         setTaxRate(String(s.tax_rate));
@@ -51,6 +53,7 @@ export default function SettingsPage() {
       await settingsService.saveSettings({
         shop_name: shopName,
         phone,
+        phone2: phone2 || undefined,
         email: email || undefined,
         address: address || undefined,
         tax_rate: Number(taxRate),
@@ -129,17 +132,25 @@ export default function SettingsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone 1</label>
                   <PhoneInput
                     value={phone}
                     onChange={setPhone}
-                    placeholder="757 892 492"
+                    placeholder="770 460 529"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone 2</label>
+                  <PhoneInput
+                    value={phone2}
+                    onChange={setPhone2}
+                    placeholder="740 800 274"
+                  />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>

@@ -20,6 +20,10 @@ export function InvoiceModal({ open, onClose, sale, settings }: InvoiceModalProp
 
   if (!sale) return null;
   const currency = settings?.currency ?? "Rs.";
+  const address = settings?.address || "411/2/b Makubura, Pannipitiya";
+  const formatPhone = (p: string) => p.startsWith("+94") ? "0" + p.slice(3) : p;
+  const phone = formatPhone(settings?.phone || "0770460529");
+  const phone2 = formatPhone(settings?.phone2 || "0740800274");
   const items = sale.items ?? [];
 
   const handlePrint = async () => {
@@ -49,12 +53,10 @@ export function InvoiceModal({ open, onClose, sale, settings }: InvoiceModalProp
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             {settings?.shop_name ?? "Seoul Motors"}
           </h2>
-          {settings?.address && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">{settings.address}</p>
-          )}
-          {settings?.phone && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">Tel: {settings.phone}</p>
-          )}
+          <p className="text-xs text-gray-500 dark:text-gray-400">{address}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Tel: {phone}{phone2 ? ` / ${phone2}` : ""}
+          </p>
         </div>
 
         {/* Invoice meta */}
