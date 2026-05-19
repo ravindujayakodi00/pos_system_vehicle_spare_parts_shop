@@ -79,7 +79,7 @@ export function ProductFormModal({
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: name === "part_number" ? value.toUpperCase().slice(0, 6) : value,
+      [name]: name === "part_number" ? value.toUpperCase().slice(0, 10) : value,
     }));
   };
 
